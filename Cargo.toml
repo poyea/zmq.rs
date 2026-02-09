@@ -1,6 +1,6 @@
 [package]
 name = "zeromq"
-version = "0.5.0-pre"
+version = "0.5.0-pre.2"
 authors = [
     "Alexei Kornienko <alexei.kornienko@gmail.com>",
     "Ryan Butler <thebutlah@gmail.com>",
