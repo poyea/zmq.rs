@@ -23,7 +23,7 @@ pub enum ZmqError {
     Socket(&'static str),
     #[error("{0}")]
     BufferFull(&'static str),
-    #[error("Failed to deliver message cause of {reason}")]
+    #[error("Failed to deliver message ({} frames) cause of {reason}", message.len())]
     ReturnToSender {
         reason: &'static str,
         message: ZmqMessage,
@@ -32,7 +32,7 @@ pub enum ZmqError {
     // Most likely Message enum should be part of public API.
     // In such case we'll be able to use this enum to return both message and multipart message in
     // same type
-    #[error("Failed to deliver messages cause of {reason}")]
+    #[error("Failed to deliver messages ({} messages) cause of {reason}", messages.len())]
     ReturnToSenderMultipart {
         reason: &'static str,
         messages: Vec<ZmqMessage>,
