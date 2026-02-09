@@ -94,3 +94,94 @@ impl SocketSend for DealerSocket {
 }
 
 impl CaptureSocket for DealerSocket {}
+
+impl DealerSocket {
+    /// Splits the socket into separate send and recv halves, allowing concurrent
+    /// sending and receiving from independent async tasks.
+    ///
+    /// The underlying socket stays alive until both halves are dropped.
+    pub fn split(mut self) -> (DealerSendHalf, DealerRecvHalf) {
+        // Swap the real fields out before self drops. The dummy backend's
+        // shutdown() is a no-op on an empty peer map.
+        let backend = std::mem::replace(
+            &mut self.backend,
+            Arc::new(GenericSocketBackend::with_options(
+                None,
+                SocketType::DEALER,
+                SocketOptions::default(),
+            )),
+        );
+        let fair_queue = std::mem::replace(&mut self.fair_queue, FairQueue::new(true));
+        let binds = std::mem::take(&mut self.binds);
+
+        let inner = Arc::new(DealerSocketInner {
+            backend,
+            _binds: binds,
+        });
+
+        (
+            DealerSendHalf {
+                inner: inner.clone(),
+            },
+            DealerRecvHalf {
+                _inner: inner,
+                fair_queue,
+            },
+        )
+    }
+}
+
+struct DealerSocketInner {
+    backend: Arc<GenericSocketBackend>,
+    _binds: HashMap<Endpoint, AcceptStopHandle>,
+}
+
+impl Drop for DealerSocketInner {
+    fn drop(&mut self) {
+        self.backend.shutdown();
+    }
+}
+
+/// The send half of a [`DealerSocket`] produced by [`DealerSocket::split`].
+pub struct DealerSendHalf {
+    inner: Arc<DealerSocketInner>,
+}
+
+/// The recv half of a [`DealerSocket`] produced by [`DealerSocket::split`].
+pub struct DealerRecvHalf {
+    _inner: Arc<DealerSocketInner>,
+    fair_queue: FairQueue<ZmqFramedRead, PeerIdentity>,
+}
+
+#[async_trait]
+impl SocketSend for DealerSendHalf {
+    async fn send(&mut self, message: ZmqMessage) -> ZmqResult<()> {
+        self.inner
+            .backend
+            .send_round_robin(Message::Message(message))
+            .await?;
+        Ok(())
+    }
+}
+
+impl CaptureSocket for DealerSendHalf {}
+
+#[async_trait]
+impl SocketRecv for DealerRecvHalf {
+    async fn recv(&mut self) -> ZmqResult<ZmqMessage> {
+        loop {
+            match self.fair_queue.next().await {
+                Some((_peer_id, Ok(Message::Message(message)))) => {
+                    return Ok(message);
+                }
+                Some((_peer_id, Ok(_))) => {}
+                Some((_peer_id, Err(e))) => {
+                    return Err(e.into());
+                }
+                None => {
+                    return Err(ZmqError::NoMessage);
+                }
+            };
+        }
+    }
+}
