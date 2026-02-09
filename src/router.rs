@@ -101,3 +101,92 @@ impl SocketSend for RouterSocket {
         }
     }
 }
+
+impl RouterSocket {
+    /// Splits the socket into separate send and recv halves, allowing concurrent
+    /// sending and receiving from independent async tasks.
+    ///
+    /// The underlying socket stays alive until both halves are dropped.
+    pub fn split(mut self) -> (RouterSendHalf, RouterRecvHalf) {
+        let backend = std::mem::replace(
+            &mut self.backend,
+            Arc::new(GenericSocketBackend::with_options(
+                None,
+                SocketType::ROUTER,
+                SocketOptions::default(),
+            )),
+        );
+        let fair_queue = std::mem::replace(&mut self.fair_queue, FairQueue::new(true));
+        let binds = std::mem::take(&mut self.binds);
+
+        let inner = Arc::new(RouterSocketInner {
+            backend,
+            _binds: binds,
+        });
+
+        (
+            RouterSendHalf {
+                inner: inner.clone(),
+            },
+            RouterRecvHalf { inner, fair_queue },
+        )
+    }
+}
+
+struct RouterSocketInner {
+    backend: Arc<GenericSocketBackend>,
+    _binds: HashMap<Endpoint, AcceptStopHandle>,
+}
+
+impl Drop for RouterSocketInner {
+    fn drop(&mut self) {
+        self.backend.shutdown();
+    }
+}
+
+/// The send half of a [`RouterSocket`] produced by [`RouterSocket::split`].
+pub struct RouterSendHalf {
+    inner: Arc<RouterSocketInner>,
+}
+
+/// The recv half of a [`RouterSocket`] produced by [`RouterSocket::split`].
+pub struct RouterRecvHalf {
+    inner: Arc<RouterSocketInner>,
+    fair_queue: FairQueue<ZmqFramedRead, PeerIdentity>,
+}
+
+#[async_trait]
+impl SocketSend for RouterSendHalf {
+    async fn send(&mut self, mut message: ZmqMessage) -> ZmqResult<()> {
+        assert!(message.len() > 1);
+        let peer_id: PeerIdentity = message.pop_front().unwrap().try_into()?;
+        match self.inner.backend.peers.get_async(&peer_id).await {
+            Some(mut peer) => {
+                peer.send_queue.send(Message::Message(message)).await?;
+                Ok(())
+            }
+            None => Err(ZmqError::Other("Destination client not found by identity")),
+        }
+    }
+}
+
+#[async_trait]
+impl SocketRecv for RouterRecvHalf {
+    async fn recv(&mut self) -> ZmqResult<ZmqMessage> {
+        loop {
+            match self.fair_queue.next().await {
+                Some((peer_id, Ok(Message::Message(mut message)))) => {
+                    message.push_front(peer_id.into());
+                    return Ok(message);
+                }
+                Some((_peer_id, Ok(_))) => {}
+                Some((peer_id, Err(_e))) => {
+                    self.inner.backend.peer_disconnected(&peer_id);
+                }
+                None => {
+                    return Err(ZmqError::NoMessage);
+                }
+            };
+        }
+    }
+}
