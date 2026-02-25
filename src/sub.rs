@@ -93,7 +93,10 @@ impl MultiPeerBackend for SubSocketBackend {
             .collect();
 
         for message in subs_msgs {
-            send_queue.send(Message::Message(message)).await.unwrap();
+            if let Err(e) = send_queue.send(Message::Message(message)).await {
+                log::error!("Failed to send subscription to peer {:?}: {:?}", peer_id, e);
+                return;
+            }
         }
 
         self.peers
