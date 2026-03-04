@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test {
+    use zeromq::__async_rt as async_rt;
     use zeromq::prelude::*;
     use zeromq::ZmqMessage;
-    use zeromq::__async_rt as async_rt;
 
     use std::time::Duration;
 

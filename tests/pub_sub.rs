@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod test {
+    use zeromq::__async_rt as async_rt;
     use zeromq::prelude::*;
     use zeromq::Endpoint;
     use zeromq::ZmqMessage;
-    use zeromq::__async_rt as async_rt;
 
     use futures::channel::{mpsc, oneshot};
     use futures::{SinkExt, StreamExt};
