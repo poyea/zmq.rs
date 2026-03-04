@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 
 /// NOTE: This will block. Careful when using in async code.
+#[allow(dead_code)]
 pub fn get_monitor_event(monitor: &zmq2::Socket) -> (zmq2::SocketEvent, u32, String) {
     assert_eq!(monitor.get_socket_type().unwrap(), zmq2::PAIR);
     let mut msgs = monitor.recv_multipart(0).expect("Monitor couldn't recv");
@@ -18,6 +19,7 @@ pub fn get_monitor_event(monitor: &zmq2::Socket) -> (zmq2::SocketEvent, u32, Str
 }
 
 /// Configures `their_sock` with a socket monitor, and returns the monitor
+#[allow(dead_code)]
 pub fn setup_monitor(
     ctx: &zmq2::Context,
     their_sock: &zmq2::Socket,
