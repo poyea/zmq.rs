@@ -153,7 +153,9 @@ mod test {
         // Their SUB connects
         let ctx = zmq2::Context::new();
         let their_sub = ctx.socket(zmq2::SUB).expect("Couldn't make sub socket");
-        their_sub.connect(&bind_endpoint).expect("Failed to connect");
+        their_sub
+            .connect(&bind_endpoint)
+            .expect("Failed to connect");
         their_sub.set_subscribe(b"").expect("Failed to subscribe");
         their_sub.set_rcvtimeo(3000).expect("Failed to set timeout");
         their_sub

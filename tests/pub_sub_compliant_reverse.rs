@@ -1,4 +1,4 @@
-//! Conformance tests for our PUB with their SUB (reverse of pub_sub_compliant.rs).
+//! Conformance tests for our PUB with their SUB (reverse of `pub_sub_compliant.rs`).
 //!
 //! Tests that our zmq.rs PUB socket correctly broadcasts to libzmq SUB sockets.
 
@@ -74,8 +74,7 @@ mod test {
                         loop {
                             match sub.recv_string(0) {
                                 Ok(Ok(msg)) => received.push(msg),
-                                Ok(Err(_)) => break, // Invalid UTF8
-                                Err(_) => break,     // Timeout or error
+                                Ok(Err(_)) | Err(_) => break, // Invalid UTF8, timeout, or error
                             }
                         }
                         (idx, received)
@@ -96,16 +95,16 @@ mod test {
             for handle in sub_handles {
                 let (idx, received) = handle.join().expect("Sub thread panicked");
                 // Each sub should receive at least some messages (slow joiner may miss early ones)
-                assert!(
-                    !received.is_empty(),
-                    "Sub {} received no messages",
-                    idx
-                );
+                assert!(!received.is_empty(), "Sub {} received no messages", idx);
                 println!("Sub {} received {} messages", idx, received.len());
             }
         }
 
-        let endpoints = vec!["tcp://127.0.0.1:0", "tcp://[::1]:0", "ipc://our_pub_test.sock"];
+        let endpoints = vec![
+            "tcp://127.0.0.1:0",
+            "tcp://[::1]:0",
+            "ipc://our_pub_test.sock",
+        ];
 
         for e in endpoints {
             println!("Testing with endpoint {}", e);
@@ -129,12 +128,20 @@ mod test {
 
         // Create subs with different topic filters
         let topic1_sub = ctx.socket(zmq2::SUB).expect("Couldn't make sub");
-        topic1_sub.connect(&bind_endpoint).expect("Failed to connect");
-        topic1_sub.set_subscribe(b"topic1").expect("Failed to subscribe");
+        topic1_sub
+            .connect(&bind_endpoint)
+            .expect("Failed to connect");
+        topic1_sub
+            .set_subscribe(b"topic1")
+            .expect("Failed to subscribe");
 
         let topic2_sub = ctx.socket(zmq2::SUB).expect("Couldn't make sub");
-        topic2_sub.connect(&bind_endpoint).expect("Failed to connect");
-        topic2_sub.set_subscribe(b"topic2").expect("Failed to subscribe");
+        topic2_sub
+            .connect(&bind_endpoint)
+            .expect("Failed to connect");
+        topic2_sub
+            .set_subscribe(b"topic2")
+            .expect("Failed to subscribe");
 
         let all_sub = ctx.socket(zmq2::SUB).expect("Couldn't make sub");
         all_sub.connect(&bind_endpoint).expect("Failed to connect");

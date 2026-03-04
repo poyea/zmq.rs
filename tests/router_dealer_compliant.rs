@@ -22,7 +22,10 @@ mod test {
 
     async fn setup_our_router(bind_endpoint: &str) -> (zeromq::RouterSocket, String) {
         let mut our_router = zeromq::RouterSocket::new();
-        let endpoint = our_router.bind(bind_endpoint).await.expect("Failed to bind");
+        let endpoint = our_router
+            .bind(bind_endpoint)
+            .await
+            .expect("Failed to bind");
         (our_router, endpoint.to_string())
     }
 
@@ -31,7 +34,9 @@ mod test {
         connect_endpoint: &str,
         identity: &[u8],
     ) -> (zmq2::Socket, zmq2::Socket) {
-        let their_dealer = ctx.socket(zmq2::DEALER).expect("Couldn't make dealer socket");
+        let their_dealer = ctx
+            .socket(zmq2::DEALER)
+            .expect("Couldn't make dealer socket");
         their_dealer
             .set_identity(identity)
             .expect("Failed to set identity");
@@ -52,8 +57,7 @@ mod test {
 
         let ctx = zmq2::Context::new();
         let identity = b"dealer-identity-1";
-        let (their_dealer, _their_monitor) =
-            setup_their_dealer(&ctx, &bind_endpoint, identity);
+        let (their_dealer, _their_monitor) = setup_their_dealer(&ctx, &bind_endpoint, identity);
 
         // Allow connection and handshake to complete
         async_rt::task::sleep(Duration::from_millis(200)).await;
@@ -109,7 +113,9 @@ mod test {
 
     fn setup_their_router(bind_endpoint: &str) -> (zmq2::Socket, String, zmq2::Socket) {
         let ctx = zmq2::Context::new();
-        let their_router = ctx.socket(zmq2::ROUTER).expect("Couldn't make router socket");
+        let their_router = ctx
+            .socket(zmq2::ROUTER)
+            .expect("Couldn't make router socket");
         their_router.bind(bind_endpoint).expect("Failed to bind");
 
         let resolved_bind = their_router.get_last_endpoint().unwrap().unwrap();
@@ -131,8 +137,7 @@ mod test {
     async fn test_their_router_our_dealer() {
         pretty_env_logger::try_init().ok();
 
-        let (their_router, bind_endpoint, their_monitor) =
-            setup_their_router("tcp://127.0.0.1:0");
+        let (their_router, bind_endpoint, their_monitor) = setup_their_router("tcp://127.0.0.1:0");
         println!("Their ROUTER bound to {}", bind_endpoint);
 
         let mut our_dealer = setup_our_dealer(&bind_endpoint).await;
@@ -164,7 +169,10 @@ mod test {
 
                 // Send reply with identity
                 their_router
-                    .send_multipart(&[identity.as_slice(), format!("Reply: {}", i).as_bytes()], 0)
+                    .send_multipart(
+                        &[identity.as_slice(), format!("Reply: {}", i).as_bytes()],
+                        0,
+                    )
                     .expect("Failed to send");
             }
             their_router
