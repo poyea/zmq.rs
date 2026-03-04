@@ -89,13 +89,7 @@ mod test {
             let recv_identity = msg.get(0).unwrap();
             assert_eq!(recv_identity.as_ref(), identity);
 
-            let payload: String = msg
-                .into_vec()
-                .pop()
-                .unwrap()
-                .to_vec()
-                .pipe(String::from_utf8)
-                .unwrap();
+            let payload = String::from_utf8(msg.into_vec().pop().unwrap().to_vec()).unwrap();
             assert_eq!(payload, format!("Request: {}", i));
 
             // Send reply with identity frame
@@ -169,10 +163,7 @@ mod test {
 
                 // Send reply with identity
                 their_router
-                    .send_multipart(
-                        &[identity.as_slice(), format!("Reply: {}", i).as_bytes()],
-                        0,
-                    )
+                    .send_multipart([identity.as_slice(), format!("Reply: {}", i).as_bytes()], 0)
                     .expect("Failed to send");
             }
             their_router
@@ -257,15 +248,3 @@ mod test {
         }
     }
 }
-
-// Helper trait for chaining
-trait Pipe: Sized {
-    fn pipe<F, R>(self, f: F) -> R
-    where
-        F: FnOnce(Self) -> R,
-    {
-        f(self)
-    }
-}
-
-impl<T> Pipe for T {}
