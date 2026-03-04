@@ -90,7 +90,11 @@ impl SocketRecv for RouterSocket {
 #[async_trait]
 impl SocketSend for RouterSocket {
     async fn send(&mut self, mut message: ZmqMessage) -> ZmqResult<()> {
-        assert!(message.len() > 1);
+        if message.len() <= 1 {
+            return Err(ZmqError::Socket(
+                "ROUTER send requires at least 2 frames: identity frame + message",
+            ));
+        }
         let peer_id: PeerIdentity = message.pop_front().unwrap().try_into()?;
         match self.backend.peers.get_async(&peer_id).await {
             Some(mut peer) => {
@@ -158,7 +162,11 @@ pub struct RouterRecvHalf {
 #[async_trait]
 impl SocketSend for RouterSendHalf {
     async fn send(&mut self, mut message: ZmqMessage) -> ZmqResult<()> {
-        assert!(message.len() > 1);
+        if message.len() <= 1 {
+            return Err(ZmqError::Socket(
+                "ROUTER send requires at least 2 frames: identity frame + message",
+            ));
+        }
         let peer_id: PeerIdentity = message.pop_front().unwrap().try_into()?;
         match self.inner.backend.peers.get_async(&peer_id).await {
             Some(mut peer) => {

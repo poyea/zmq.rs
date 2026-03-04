@@ -52,8 +52,12 @@ impl GenericSocketBackend {
             let next_peer_id = match self.round_robin.pop() {
                 Some(peer) => peer,
                 None => match message {
-                    Message::Greeting(_) => panic!("Sending greeting is not supported"),
-                    Message::Command(_) => panic!("Sending commands is not supported"),
+                    Message::Greeting(_) => {
+                        return Err(ZmqError::Socket("Sending greeting is not supported"))
+                    }
+                    Message::Command(_) => {
+                        return Err(ZmqError::Socket("Sending commands is not supported"))
+                    }
                     Message::Message(m) => {
                         return Err(ZmqError::ReturnToSender {
                             reason: "Not connected to peers. Unable to send messages",

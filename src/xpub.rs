@@ -134,12 +134,16 @@ impl Drop for XPubSocket {
 #[async_trait]
 impl SocketSend for XPubSocket {
     async fn send(&mut self, message: ZmqMessage) -> ZmqResult<()> {
+        let first_frame = match message.get(0) {
+            Some(frame) => frame,
+            None => return Ok(()), // Empty message, nothing to publish
+        };
         let mut dead_peers = Vec::new();
         let mut iter = self.backend.subscribers.begin_async().await;
         while let Some(mut subscriber) = iter {
             for sub_filter in &subscriber.subscriptions {
-                if sub_filter.len() <= message.get(0).unwrap().len()
-                    && sub_filter.as_slice() == &message.get(0).unwrap()[0..sub_filter.len()]
+                if sub_filter.len() <= first_frame.len()
+                    && sub_filter.as_slice() == &first_frame[0..sub_filter.len()]
                 {
                     let res = subscriber
                         .send_queue
