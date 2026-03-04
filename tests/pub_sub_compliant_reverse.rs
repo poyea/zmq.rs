@@ -71,11 +71,8 @@ mod test {
                 .map(|(idx, sub)| {
                     std::thread::spawn(move || {
                         let mut received = Vec::new();
-                        loop {
-                            match sub.recv_string(0) {
-                                Ok(Ok(msg)) => received.push(msg),
-                                Ok(Err(_)) | Err(_) => break, // Invalid UTF8, timeout, or error
-                            }
+                        while let Ok(Ok(msg)) = sub.recv_string(0) {
+                            received.push(msg);
                         }
                         (idx, received)
                     })

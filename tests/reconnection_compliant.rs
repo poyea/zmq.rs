@@ -34,7 +34,7 @@ mod test {
     ///
     /// NOTE: Currently ignored because zmq.rs doesn't fully implement
     /// reconnection with subscription resync. This is a known limitation.
-    /// See: https://github.com/zeromq/zmq.rs/issues/XXX
+    /// See: <https://github.com/zeromq/zmq.rs/issues/XXX>
     #[async_rt::test]
     #[ignore = "zmq.rs reconnection with subscription resync not fully implemented"]
     async fn test_our_sub_reconnects_to_their_restarted_pub() {
@@ -106,7 +106,7 @@ mod test {
                         break;
                     }
                 }
-                _ => continue,
+                _ => {}
             }
         }
 
