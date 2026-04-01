@@ -158,6 +158,9 @@ impl Drop for RouterSocketInner {
 }
 
 /// The send half of a [`RouterSocket`] produced by [`RouterSocket::split`].
+///
+/// This half can be cloned to send from multiple async tasks concurrently.
+#[derive(Clone)]
 pub struct RouterSendHalf {
     inner: Arc<RouterSocketInner>,
 }
